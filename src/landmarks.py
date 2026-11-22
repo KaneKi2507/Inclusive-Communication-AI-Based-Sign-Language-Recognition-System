@@ -2,7 +2,7 @@
 HandLandmarkExtractor — Modern MediaPipe Tasks API wrapper.
 
 Contract (architecture.md § 4-A):
-  • Uses mediapipe.tasks.python.vision.HandLandmarker in IMAGE mode.
+  • Uses mediapipe.tasks.python.vision.HandLandmarker in VIDEO mode.
   • Auto-downloads hand_landmarker.task float16 model if missing.
   • Draws 21 landmarks + bone connections with cv2.circle / cv2.line ONLY
     (mp.solutions.hands and mp.solutions.drawing_utils are strictly forbidden).
@@ -12,6 +12,7 @@ Contract (architecture.md § 4-A):
       Zero-padded for a missing hand; None if no hands detected.
 """
 
+import time
 import urllib.request
 
 import cv2
@@ -92,7 +93,7 @@ def _normalise_hand(landmarks: list) -> np.ndarray:
 
 class HandLandmarkExtractor:
     """
-    Wraps MediaPipe Tasks HandLandmarker for single-frame (IMAGE mode) inference.
+    Wraps MediaPipe Tasks HandLandmarker for video-stream (VIDEO mode) inference.
 
     Usage
     -----
@@ -110,10 +111,15 @@ class HandLandmarkExtractor:
             base_options=mp.tasks.BaseOptions(
                 model_asset_path=str(HAND_LANDMARKER_PATH)
             ),
-            running_mode=RunningMode.IMAGE,
+            running_mode=RunningMode.VIDEO,
             num_hands=NUM_HANDS,
+            min_hand_detection_confidence=0.3,
+            min_hand_presence_confidence=0.3,
+            min_tracking_confidence=0.3,
         )
         self._landmarker: HandLandmarker = HandLandmarker.create_from_options(options)
+        self._last_timestamp_ms: int = 0
+        self._timestamp_ms: int = 0
 
     # ------------------------------------------------------------------
     # Public API
@@ -147,7 +153,12 @@ class HandLandmarkExtractor:
         rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
-        result = self._landmarker.detect(mp_image)
+        # Monotonically increasing timestamp in milliseconds for VIDEO mode
+        now_ms = time.monotonic_ns() // 1_000_000
+        self._timestamp_ms = max(now_ms, self._last_timestamp_ms + 1)
+        self._last_timestamp_ms = self._timestamp_ms
+
+        result = self._landmarker.detect_for_video(mp_image, self._timestamp_ms)
 
         hand_landmarks_list = result.hand_landmarks          # list[list[NormalisedLandmark]]
         handedness_list = result.handedness                  # list[list[Category]]
@@ -168,6 +179,11 @@ class HandLandmarkExtractor:
             # Determine slot: Left=0, Right=1
             label = handedness[0].category_name  # "Left" or "Right"
             slot = 0 if label == "Left" else 1
+
+            # If slot is already taken (e.g. MediaPipe misclassified both hands as same side due to overlap),
+            # place the second hand into the remaining empty slot (0 or 1).
+            if slot in slot_features:
+                slot = 1 - slot
 
             # --- Normalise features ---
             slot_features[slot] = _normalise_hand(landmarks)
