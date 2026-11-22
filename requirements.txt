@@ -1,0 +1,15 @@
+# Vision & Tracking
+opencv-python
+mediapipe==1.2.3
+
+# ML & Evaluation
+scikit-learn
+numpy
+pandas
+joblib
+matplotlib
+seaborn
+
+# UI & Audio
+streamlit
+pyttsx3
