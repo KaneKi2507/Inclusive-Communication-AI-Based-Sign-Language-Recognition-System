@@ -76,7 +76,33 @@ def train_and_evaluate() -> None:
     print(f"[train_model] Training samples: {X_train.shape[0]}, Test samples: {X_test.shape[0]}")
 
     # -----------------------------------------------------------------------
-    # 3. Model Definitions
+    # 3. Mirror Augmentation on Training Set Only (prevents data leakage)
+    #    Each sample is hand-swapped to produce an ambidextrous classifier:
+    #      • Swap Left-hand slice  (cols  0..62) ↔ Right-hand slice (cols 63..125)
+    #      • Negate all x-coordinates in the mirrored copy (every 3rd col from 0)
+    #    X_test / y_test are NEVER touched — honest evaluation is preserved.
+    # -----------------------------------------------------------------------
+    X_mirror = X_train.copy()
+
+    # Swap left ↔ right feature blocks (each block is 63 values: 21 × (x,y,z))
+    X_mirror[:, :63] = X_train[:, 63:]
+    X_mirror[:, 63:] = X_train[:, :63]
+
+    # Negate x-coordinates: columns 0, 3, 6, …, 123 — first element of every (x,y,z) triplet
+    x_indices = np.arange(0, 126, 3)   # 42 indices covering both hands
+    X_mirror[:, x_indices] *= -1.0
+
+    X_train = np.concatenate([X_train, X_mirror], axis=0)
+    y_train = np.concatenate([y_train, y_train],  axis=0)
+
+    print(
+        f"[train_model] Mirror augmentation applied — "
+        f"training set doubled to {X_train.shape[0]} samples "
+        f"(test set untouched: {X_test.shape[0]} samples)."
+    )
+
+    # -----------------------------------------------------------------------
+    # 4. Model Definitions
     # -----------------------------------------------------------------------
     models = {
         "SVC_RBF": Pipeline([
@@ -91,7 +117,7 @@ def train_and_evaluate() -> None:
     predictions = {}
 
     # -----------------------------------------------------------------------
-    # 4. Training & Benchmarking
+    # 5. Training & Benchmarking
     # -----------------------------------------------------------------------
     for name, model in models.items():
         print(f"[train_model] Training {name}...")
@@ -118,7 +144,7 @@ def train_and_evaluate() -> None:
     print(f"[train_model] Saved comparison to: {comparison_path}")
 
     # -----------------------------------------------------------------------
-    # 5. Best Model Selection & Artifact Export
+    # 6. Best Model Selection & Artifact Export
     # -----------------------------------------------------------------------
     best_result = comparison_df.sort_values(by="weighted_f1", ascending=False).iloc[0]
     best_name = str(best_result["model"])
@@ -135,7 +161,7 @@ def train_and_evaluate() -> None:
     print(f"[train_model] Saved label encoder to: {LABEL_ENCODER_PATH}")
 
     # -----------------------------------------------------------------------
-    # 6. Classification Report & Confusion Matrix
+    # 7. Classification Report & Confusion Matrix
     # -----------------------------------------------------------------------
     report_text = classification_report(
         y_test, best_preds, target_names=class_names, digits=4
