@@ -145,7 +145,7 @@ def train_and_evaluate() -> None:
     print(f"[train_model] Saved classification report to: {report_path}")
 
     cm = confusion_matrix(y_test, best_preds)
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(14, 12))
     sns.heatmap(
         cm,
         annot=True,

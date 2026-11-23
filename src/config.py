@@ -39,19 +39,27 @@ HOLD_DURATION_SEC = 1.5
 CAMERA_INDEX = 0
 
 # ---------------------------------------------------------------------------
-# Sign Classes (12 visually distinct static signs)
+# Sign Classes (20 visually distinct static signs)
 # ---------------------------------------------------------------------------
 SIGN_CLASSES = [
     "HELLO",
     "YES",
+    "BAD",
     "NO",
-    "STOP",
-    "HELP",
-    "WATER",
-    "THANK_YOU",
     "OK",
     "PEACE",
-    "PLEASE",
+    "WATER",
     "I_LOVE_YOU",
+    "CALL",
+    "YOU",
+    "COOL",
+    "WAIT",
+    "LEFT",
+    "SMALL",
     "EMERGENCY",
+    "HELP",
+    "STOP",
+    "HAPPY",
+    "BIG",
+    "DONE",
 ]
