@@ -46,3 +46,4 @@ models/*.joblib
 .idea/
 .DS_Store
 Thumbs.db
+data/raw_asl_alphabet/

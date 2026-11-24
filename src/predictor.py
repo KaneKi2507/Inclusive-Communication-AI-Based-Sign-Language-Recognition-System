@@ -45,29 +45,36 @@ class SignPredictor:
     predictor.reset()
     """
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        classifier_path=CLASSIFIER_PATH,
+        encoder_path=LABEL_ENCODER_PATH,
+    ) -> None:
         # -----------------------------------------------------------------------
         # Load model artifacts — both must exist before we can run inference.
         # -----------------------------------------------------------------------
-        if not CLASSIFIER_PATH.exists():
+        classifier_path = type(CLASSIFIER_PATH)(classifier_path)
+        encoder_path    = type(LABEL_ENCODER_PATH)(encoder_path)
+
+        if not classifier_path.exists():
             raise FileNotFoundError(
-                f"Classifier not found at '{CLASSIFIER_PATH}'.\n"
+                f"Classifier not found at '{classifier_path}'.\n"
                 "Please train the model first by running:\n"
                 "    python -m src.train_model"
             )
-        if not LABEL_ENCODER_PATH.exists():
+        if not encoder_path.exists():
             raise FileNotFoundError(
-                f"Label encoder not found at '{LABEL_ENCODER_PATH}'.\n"
+                f"Label encoder not found at '{encoder_path}'.\n"
                 "Please train the model first by running:\n"
                 "    python -m src.train_model"
             )
 
-        self._model = joblib.load(CLASSIFIER_PATH)
-        self._encoder = joblib.load(LABEL_ENCODER_PATH)
+        self._model   = joblib.load(classifier_path)
+        self._encoder = joblib.load(encoder_path)
 
         print(
-            f"[predictor] Loaded classifier from: {CLASSIFIER_PATH}\n"
-            f"[predictor] Loaded label encoder from: {LABEL_ENCODER_PATH}\n"
+            f"[predictor] Loaded classifier from: {classifier_path}\n"
+            f"[predictor] Loaded label encoder from: {encoder_path}\n"
             f"[predictor] Classes: {list(self._encoder.classes_)}"
         )
 
